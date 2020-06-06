@@ -16,7 +16,7 @@ model_urls = {
 class DANNModel(nn.Module):
 
     def __init__(self, num_classes=1000):
-        super(DANNmodel, self).__init__()
+        super(DANNModel, self).__init__()
         
         self.features = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
