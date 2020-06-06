@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.hub import load_state_dict_from_url
 from torch.autograd import Function
-from gradient_reversal import ReverseLayer
+from gradient_reversal import ReverseLayerF
 
 
 __all__ = ['AlexNet', 'alexnet']
