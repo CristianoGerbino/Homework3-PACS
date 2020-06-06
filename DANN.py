@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 from .utils import load_state_dict_from_url
+from torch.autograd import Function
+from gradient_reversal import ReverseLayer
 
 
 __all__ = ['AlexNet', 'alexnet']
@@ -40,7 +42,7 @@ class DANNModel(nn.Module):
             nn.Dropout(),
             nn.Linear(4096, 4096),
             nn.ReLU(inplace=True),
-            nn.Linear(4096, 2),
+            nn.Linear(4096, num_classes),
         )
         
         self.discriminator = nn.Sequential(
@@ -50,37 +52,49 @@ class DANNModel(nn.Module):
             nn.Dropout(),
             nn.Linear(4096, 4096),
             nn.ReLU(inplace=True),
-            nn.Linear(4096, num_classes),
+            nn.Linear(4096, 2),
+        )
 
-    def forward(self, x, discriminator = False, alpha = None:
+    def forward(self, x, alpha = None):
+    #if we pass alpha we can assume we are training the discriminator
         
         x = self.features(x)
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         
-        if not discriminator:
-          out = self.classifier(x)
-          return out
+        if alpha is None:
+          class_out = self.classifier(x)
+          return class_out
         
         else:
-          if alpha == None:
-            raise ValueError("Invalid Parameter for disciminator = True")
+          #gradient reversal
+          reverse_features = ReverseLayerF.apply(x, alpha)
+          discr_out = self.discriminator(reverse_features)
+          return discr_out
+            
           
           
           
          
           
 
-def alexnet(pretrained=False, progress=True, **kwargs):
-    r"""AlexNet model architecture from the
-    `"One weird trick..." <https://arxiv.org/abs/1404.5997>`_ paper.
+def alexnetDANN(pretrained=False, progress=True, **kwargs):
+    """
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    model = AlexNet(**kwargs)
+    model = DANNModel(num_classes = 1000, **kwargs)
     if pretrained:
         state_dict = load_state_dict_from_url(model_urls['alexnet'],
                                               progress=progress)
-        model.load_state_dict(state_dict)
+        model.load_state_dict(state_dict, strict = False)
+     
+    #we copy the pretrained weights of the classifier to the domain classifier
+    model.discriminator[1].weight.data = model.classifier[1].weight.data.clone()
+    model.discriminator[1].bias.data = model.classifier[1].bias.data.clone()
+
+    model.discriminator[4].weight.data = model.classifier[4].weight.data.clone()
+    model.discriminator[4].bias.data = model.classifier[4].bias.data.clone()
+
     return model
