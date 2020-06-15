@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 from torch.hub import load_state_dict_from_url
 from torch.autograd import Function
-from gradient_reversal import ReverseLayerF
-
+#from gradient_reversal import ReverseLayerF
 
 __all__ = ['AlexNet', 'alexnet']
 
@@ -11,6 +10,24 @@ __all__ = ['AlexNet', 'alexnet']
 model_urls = {
     'alexnet': 'https://download.pytorch.org/models/alexnet-owt-4df8aa71.pth',
 }
+
+
+class ReverseLayerF(Function):
+    # Forwards identity
+    # Sends backward reversed gradients
+    @staticmethod
+    def forward(ctx, x, alpha):
+        ctx.alpha = alpha
+
+        return x.view_as(x)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        output = grad_output.neg() * ctx.alpha
+
+        return output, None
+
+
 
 
 class DANNModel(nn.Module):
